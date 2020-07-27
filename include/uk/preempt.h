@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Authors: Yuri Volchkov <yuri.volchkov@neclab.eu>
+ * Authors: Alexander Jung <alexander.jung@neclab.eu>
  *
- * Copyright (c) 2019, NEC Laboratories Europe GmbH, NEC Corporation.
+ * Copyright (c) 2020, NEC Laboratories Europe GmbH, NEC Corporation.
+ *                     All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,36 +29,12 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
 
-#include <stddef.h>
-#include <uk/essentials.h>
+#ifndef __UK_PREEMPT_H__
+#define __UK_PREEMPT_H__
 
-/* If the buffer is full, tracing disables itself.
- * Using a circular buffer will not make it better: in any case, losing trace
- * data is undesired and we should keep this as simple as possible.
- */
-char uk_trace_buffer[CONFIG_LIBUKDEBUG_TRACE_BUFFER_SIZE];
+#define uk_preempt_disable()  barrier()
+#define uk_preempt_enable()   barrier()
 
-size_t uk_trace_buffer_free = CONFIG_LIBUKDEBUG_TRACE_BUFFER_SIZE;
-char *uk_trace_buffer_writep = uk_trace_buffer;
-
-
-/* Store a string in format "key = value" in the section
- * .uk_trace_keyvals. This can be anything what you want trace.py
- * script to know about, and what you do not want to consume any space
- * in runtime memory.
- *
- * This section will be stripped at the final states of building, but
- * the key-value data can be easily extracted by:
- *
- *     $ readelf -p .uk_trace_keyvals <your_image.gdb>
- */
-#define TRACE_DEFINE_KEY(key, val)			\
-	__attribute((__section__(".uk_trace_keyvals")))	\
-	static const char key[] __used =		\
-		#key " = " #val
-
-TRACE_DEFINE_KEY(format_version, 1);
+#endif /* __UK_PREEMPT_H__ */

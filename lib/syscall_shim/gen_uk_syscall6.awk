@@ -5,9 +5,15 @@ BEGIN {
 	print "#include <uk/syscall.h>"
 	print "#include <uk/print.h>\n"
 
-	print "long uk_vsyscall(long nr, va_list arg)\n{"
-	print "\t(void) arg;\n"
-	print "\tswitch (nr) {"
+	printf "long uk_syscall6(long nr, "
+	for (i = 1; i < max_args; i++)
+		printf "long arg%d, ",i
+	printf "long arg%d)\n{\n", max_args
+
+	for (i = 1; i <= max_args; i++)
+		printf "\t(void) arg%d;\n", i
+
+	print "\n\tswitch (nr) {"
 }
 
 
@@ -18,9 +24,9 @@ BEGIN {
 	printf "\tcase %s:\n", sys_name;
 	printf "\t\treturn uk_syscall_e_%s(", name;
 	for (i = 1; i < args_nr; i++)
-		printf("va_arg(arg, long), ")
+		printf("arg%d, ", i)
 	if (args_nr > 0)
-		printf("va_arg(arg, long)")
+		printf("arg%d", args_nr)
 	printf(");\n")
 }
 

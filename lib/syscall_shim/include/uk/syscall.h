@@ -51,11 +51,11 @@
  * UK_LIBC_SYSCALLS can be set to 0 through compilation flags.
  */
 #ifndef UK_LIBC_SYSCALLS
-#if CONFIG_LIBSYSCALL_SHIM_NOWRAPPER
+#if CONFIG_LIBSYSCALL_SHIM && CONFIG_LIBSYSCALL_SHIM_NOWRAPPER
 #define UK_LIBC_SYSCALLS (0)
 #else
 #define UK_LIBC_SYSCALLS (1)
-#endif /* CONFIG_LIBSYSCALL_SHIM_NOWRAPPER */
+#endif /* CONFIG_LIBSYSCALL_SHIM && CONFIG_LIBSYSCALL_SHIM_NOWRAPPER */
 #endif /* UK_LIBC_SYSCALLS */
 
 #define __uk_scc(X) ((long) (X))
@@ -93,6 +93,7 @@ typedef long uk_syscall_arg_t;
 #define __UK_NAME2SCALLE_FN(name) UK_CONCAT(uk_syscall_e_, name)
 #define __UK_NAME2SCALLR_FN(name) UK_CONCAT(uk_syscall_r_, name)
 
+#define UK_ARG_MAP0(...)
 #define UK_ARG_MAP1(m, type, arg) m(type, arg)
 #define UK_ARG_MAP2(m, type, arg, ...) m(type, arg), UK_ARG_MAP1(m, __VA_ARGS__)
 #define UK_ARG_MAP3(m, type, arg, ...) m(type, arg), UK_ARG_MAP2(m, __VA_ARGS__)
@@ -288,8 +289,10 @@ typedef long uk_syscall_arg_t;
 #include <uk/bits/syscall_stubs.h>
 
 /* System call, returns -1 and sets errno on errors */
-long uk_syscall(long n, ...);
-long uk_vsyscall(long n, va_list arg);
+long uk_syscall(long nr, ...);
+long uk_vsyscall(long nr, va_list arg);
+long uk_syscall6(long nr, long arg1, long arg2, long arg3,
+		 long arg4, long arg5, long arg6);
 
 /*
  * Use this variant instead of `uk_syscall()` whenever the system call number
@@ -300,8 +303,10 @@ long uk_vsyscall(long n, va_list arg);
 	UK_CONCAT(__uk_syscall, __UK_SYSCALL_NARGS(__VA_ARGS__))(__VA_ARGS__)
 
 /* Raw system call, returns negative codes on errors */
-long uk_syscall_r(long n, ...);
-long uk_vsyscall_r(long n, va_list arg);
+long uk_syscall_r(long nr, ...);
+long uk_vsyscall_r(long nr, va_list arg);
+long uk_syscall6_r(long nr, long arg1, long arg2, long arg3,
+		   long arg4, long arg5, long arg6);
 
 /*
  * Use this variant instead of `uk_syscall_r()` whenever the system call number
@@ -336,6 +341,18 @@ const char *uk_syscall_name(long nr);
  *  - (NULL): if system call is not provided
  */
 const char *uk_syscall_name_p(long nr);
+
+/**
+ * Returns the according raw system call handler as function pointer for the
+ * given system call number. If the system call handler is not available,
+ * NULL is returned.
+ * @param nr
+ *  System call number of current architecture
+ * @return
+ *  - Function pointer to raw system call handler
+ *  - (NULL): if system call handler is not provided
+ */
+long (*uk_syscall_r_fn(long nr))(void);
 
 #endif /* CONFIG_LIBSYSCALL_SHIM */
 

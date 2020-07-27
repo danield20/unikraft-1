@@ -1,7 +1,8 @@
-/* SPDX-License-Identifier: BSD-2-Clause */
-/*
- * Copyright (c) 2009, Citrix Systems, Inc.
- * Copyright (c) 2017, NEC Europe Ltd., NEC Corporation.
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ *
+ * Copyright (c) 2007, 2008 Kip Macy <kmacy@freebsd.org>
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,10 +13,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -25,42 +26,42 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __UKARCH_LCPU_H__
-#error Do not include this header directly
+#include <uk/ring.h>
+#include <uk/assert.h>
+#include <uk/alloc.h>
+#include <uk/mutex.h>
+#include <uk/config.h>
+#include <uk/print.h>
+#include <uk/essentials.h>
+
+struct uk_ring *
+uk_ring_alloc(int count, struct uk_alloc *a
+#ifdef DEBUG_BUFRING
+		, struct uk_mutex *lock
 #endif
-
-#define CACHE_LINE_SIZE	32
-
-struct __regs {
-	unsigned long r0;
-	unsigned long r1;
-	unsigned long r2;
-	unsigned long r3;
-	unsigned long r4;
-	unsigned long r5;
-	unsigned long r6;
-	unsigned long r7;
-	unsigned long r8;
-	unsigned long r9;
-	unsigned long r10;
-	unsigned long r11;
-	unsigned long r12;
-};
-
-/* We probably only need "dmb" here, but we'll start by being paranoid. */
-#ifndef mb
-#define mb() __asm__("dsb" : : : "memory")
-#endif
-
-#ifndef rmb
-#define rmb() __asm__("dsb" : : : "memory")
-#endif
-
-#ifndef wmb
-#define wmb() __asm__("dsb" : : : "memory")
-#endif
-
-static inline void ukarch_spinwait(void)
+)
 {
-	/* Intelligent busy wait not supported on arm. */
+	struct uk_ring *br;
+
+	/* buf ring must be size power of 2 */
+	UK_ASSERT(POWER_OF_2(count));
+
+	br = uk_malloc(a, sizeof(struct uk_ring) + count * sizeof(caddr_t));
+	if (br == NULL)
+		return NULL;
+#ifdef DEBUG_BUFRING
+	br->br_lock = lock;
+#endif
+	br->br_prod_size = br->br_cons_size = count;
+	br->br_prod_mask = br->br_cons_mask = count - 1;
+	br->br_prod_head = br->br_cons_head = 0;
+	br->br_prod_tail = br->br_cons_tail = 0;
+
+	return br;
+}
+
+void
+uk_ring_free(struct uk_ring *br, struct uk_alloc *a)
+{
+	uk_free(a, br);
 }
