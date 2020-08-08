@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Authors: Vlad-Andrei Badoiu <vlad_andrei.badoiu@stud.acs.upb.ro>
+ * Authors: Badoiu Vlad-Andrei <vlad_andrei.badoiu@stud.acs.upb.ro>
  *
- * Copyright (c) 2019, NEC Europe Ltd., NEC Corporation. All rights reserved.
+ * Copyright (c) 2019, University Politehnica of Bucharest. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,25 +28,24 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
 
-#ifndef __UK_PAGE_H__
-#define __UK_PAGE_H__
+#include <uk/assert.h>
+#include <uk/config.h>
+#include <uk/ctors.h>
+#include <uk/thread.h>
 
-#include <uk/asm/limits.h>
-#include <uk/essentials.h>
-
-#ifdef __cplusplus
-extern "C" {
+#ifdef CONFIG_LIBUKSP_VALUE_USECONSTANT
+const unsigned long __stack_chk_guard = CONFIG_LIBUKSP_VALUE_CONSTANT;
+#else
+const unsigned long __stack_chk_guard = 0xDEADBEEF;
 #endif
 
-#define round_pgup(a)   ALIGN_UP((a), __PAGE_SIZE)
-#define round_pgdown(a) ALIGN_DOWN((a), __PAGE_SIZE)
+__attribute__((noreturn))
+void __stack_chk_fail(void)
+{
+	unsigned long sp;
 
-#ifdef __cplusplus
+	sp = ukarch_read_sp() & STACK_MASK_TOP;
+	UK_CRASH("Stack smashing detected. SP %p\n", (void *) sp);
 }
-#endif
-
-#endif /* __UK_PAGE_H__ */

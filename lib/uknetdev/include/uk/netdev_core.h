@@ -65,6 +65,10 @@
 extern "C" {
 #endif
 
+#ifndef CONFIG_UK_NETDEV_SCRATCH_SIZE
+#define CONFIG_UK_NETDEV_SCRATCH_SIZE 0
+#endif /* CONFIG_UK_NETDEV_SCRATCH_SIZE */
+
 struct uk_netdev;
 UK_TAILQ_HEAD(uk_netdev_list, struct uk_netdev);
 
@@ -72,6 +76,17 @@ UK_TAILQ_HEAD(uk_netdev_list, struct uk_netdev);
  * A structure used for Ethernet hardware addresses
  */
 #define UK_NETDEV_HWADDR_LEN 6 /**< Length of Ethernet address. */
+
+/**
+ * The netdevice support rx/tx interrupt.
+ */
+#define UK_FEATURE_RXQ_INTR_BIT		    0
+#define UK_FEATURE_RXQ_INTR_AVAILABLE  (1UL << UK_FEATURE_RXQ_INTR_BIT)
+#define UK_FEATURE_TXQ_INTR_BIT		    1
+#define UK_FEATURE_TXQ_INTR_AVAILABLE  (1UL << UK_FEATURE_TXQ_INTR_BIT)
+
+#define uk_netdev_rxintr_supported(feature)	\
+	(feature & (UK_FEATURE_RXQ_INTR_AVAILABLE))
 
 struct uk_hwaddr {
 	uint8_t addr_bytes[UK_NETDEV_HWADDR_LEN];
@@ -87,6 +102,7 @@ struct uk_netdev_info {
 	uint16_t max_mtu;   /**< Maximum supported MTU size. */
 	uint16_t nb_encap_tx;  /**< Number of bytes required as headroom for tx. */
 	uint16_t nb_encap_rx;  /**< Number of bytes required as headroom for rx. */
+	uint32_t features; /**< bitmap of the features supported */
 };
 
 /**
@@ -373,6 +389,12 @@ struct uk_netdev_data {
 	const char           *drv_name;
 };
 
+struct uk_netdev_einfo {
+	const char *ipv4_addr;
+	const char *ipv4_net_mask;
+	const char *ipv4_gw_addr;
+};
+
 /**
  * NETDEV
  * A structure used to interact with a network device.
@@ -400,6 +422,13 @@ struct uk_netdev {
 	struct uk_netdev_tx_queue   *_tx_queue[CONFIG_LIBUKNETDEV_MAXNBQUEUES];
 
 	UK_TAILQ_ENTRY(struct uk_netdev) _list;
+
+	/** Netdevice address configuration */
+	struct uk_netdev_einfo *_einfo;
+
+#if (CONFIG_UK_NETDEV_SCRATCH_SIZE > 0)
+	char scratch_pad[CONFIG_UK_NETDEV_SCRATCH_SIZE];
+#endif /* CONFIG_UK_NETDEV_SCRATCH_SIZE */
 };
 
 #ifdef __cplusplus

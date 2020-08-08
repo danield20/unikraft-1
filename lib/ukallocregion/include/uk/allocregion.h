@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Authors: Vlad-Andrei Badoiu <vlad_andrei.badoiu@stud.acs.upb.ro>
+ * Authors: Hugo Lefeuvre <hugo.lefeuvre@neclab.eu>
  *
- * Copyright (c) 2019, NEC Europe Ltd., NEC Corporation. All rights reserved.
+ * Copyright (c) 2020, NEC Laboratories Europe GmbH, NEC Corporation,
+ *                     All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,25 +29,22 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
 
-#ifndef __UK_PAGE_H__
-#define __UK_PAGE_H__
+#ifndef __LIBUKALLOCREGION_H__
+#define __LIBUKALLOCREGION_H__
 
-#include <uk/asm/limits.h>
-#include <uk/essentials.h>
+#include <uk/alloc.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define round_pgup(a)   ALIGN_UP((a), __PAGE_SIZE)
-#define round_pgdown(a) ALIGN_DOWN((a), __PAGE_SIZE)
+/* allocator initialization */
+struct uk_alloc *uk_allocregion_init(void *base, size_t len);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __UK_PAGE_H__ */
+#endif /* __LIBUKALLOCREGION_H__ */
