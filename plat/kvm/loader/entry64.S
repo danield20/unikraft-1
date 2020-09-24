@@ -30,7 +30,6 @@
 #include <x86/cpu_defs.h>
 #include <kvm-x86/traps.h>
 #include <kvm-x86/multiboot_defs.h>
-#include <uk/config.h>
 
 #define ENTRY(x) .globl x; .type x,%function; x:
 #define END(x)   .size x, . - x
@@ -38,7 +37,6 @@
 #define MYMULTIBOOT_FLAGS \
     (MULTIBOOT_PAGE_ALIGN | MULTIBOOT_MEMORY_INFO | MULTIBOOT_AOUT_KLUDGE)
 
-#ifndef CONFIG_ENABLE_PIE
 .section .data.boot
 
 .align 4
@@ -238,7 +236,6 @@ nofsgsbase:
 	cli
 	hlt
 END(_libkvmplat_start64)
-#endif
 
 .text
 ENTRY(_libkvmplat_newstack)

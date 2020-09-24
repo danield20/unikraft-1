@@ -73,6 +73,13 @@ config KVM_PCI
        help
                 PCI bus driver for probing and operating PCI devices
 
+config PLAT_KVM_LOADER
+       bool "KVM Loader"
+       default n
+       depends on (ARCH_X86_64)
+       help
+                The bootloader that is used for the ASLR.
+
 config VIRTIO_BUS
       bool  "Virtio bus driver"
       default y

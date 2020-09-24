@@ -4,6 +4,11 @@
 $(eval $(call addplat_s,kvm,$(CONFIG_PLAT_KVM)))
 
 ##
+## add pseudoplatform for the loader
+##
+$(eval $(call addplat_s,kvmloader,$(CONFIG_PLAT_KVM_LOADER)))
+
+##
 ## KVM platform library registration
 ##
 $(eval $(call addplatlib,kvm,libkvmplat))
@@ -14,6 +19,11 @@ $(eval $(call addplatlib_s,kvm,libkvmvirtioblk,$(CONFIG_VIRTIO_BLK)))
 $(eval $(call addplatlib_s,kvm,libkvmvirtio9p,$(CONFIG_VIRTIO_9P)))
 $(eval $(call addplatlib_s,kvm,libkvmofw,$(CONFIG_LIBOFW)))
 $(eval $(call addplatlib_s,kvm,libkvmgicv2,$(CONFIG_LIBGICV2)))
+
+##
+## Bootloader platform library reg
+##
+$(eval $(call addplatlib,kvmloader,libkvmloader))
 
 ##
 ## Platform library definitions
@@ -182,3 +192,110 @@ LIBKVMGICV2_CINCLUDES-y         += -I$(UK_PLAT_COMMON_BASE)/include
 LIBKVMGICV2_CINCLUDES-y         += -I$(UK_PLAT_DRIVERS_BASE)/include
 
 LIBKVMGICV2_SRCS-y += $(UK_PLAT_DRIVERS_BASE)/gic/gic-v2.c
+
+##
+## Loader platform library definitions
+##
+LIBKVMLOADER_ASINCLUDES-y        += -I$(LIBKVMPLAT_BASE)/include
+LIBKVMLOADER_ASINCLUDES-y        += -I$(UK_PLAT_COMMON_BASE)/include
+LIBKVMLOADER_CINCLUDES-y    	 += -I$(LIBKVMPLAT_BASE)/include
+LIBKVMLOADER_CINCLUDES-y       	 += -I$(UK_PLAT_COMMON_BASE)/include
+LIBKVMLOADER_CINCLUDES-y    	 += -I$(UK_PLAT_DRIVERS_BASE)/include
+
+##
+## Ukallocbbuddy library definitions
+##
+LIBKVMLOADER_CINCLUDES-y  		 += -I$(LIBUKALLOCBBUDDY_BASE)/include
+
+##
+## Ukalloc library definitions
+##
+LIBKVMLOADER_CINCLUDES-y  		 += -I$(LIBUKALLOC_BASE)/include
+
+##
+## Libnolibc library definitions
+##
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBNOLIBC_BASE)/include
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBNOLIBC_BASE)/arch/$(ARCH)
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBNOLIBC_BASE)/musl-imported/include
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBNOLIBC_BASE)/musl-imported/arch/generic
+
+##
+## Ukswrand library definitions
+##
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBUKSWRAND_BASE)/include
+
+##
+## Libelf library definitions
+##
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBKVMPLAT_BASE)/loader/ukswrand/include
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBKVMPLAT_BASE)/loader/elfloader
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBKVMPLAT_BASE)/loader/libelf
+LIBKVMLOADER_CINCLUDES-y         += -I$(LIBKVMPLAT_BASE)/loader/libelf/include
+
+
+LIBKVMLOADER_ASFLAGS             += -DKVMPLAT
+LIBKVMLOADER_CFLAGS              += -DKVMPLAT
+LIBKVMLOADER_CXXFLAGS            += -DKVMPLAT
+
+##
+## Add loader source files
+##
+LIBKVMLOADER_SRCS += $(LIBUKALLOCBBUDDY_BASE)/bbuddy.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/x86/console.c
+LIBKVMLOADER_SRCS += $(UK_PLAT_COMMON_BASE)/x86/cpu_features.c
+LIBKVMLOADER_SRCS += $(UK_PLAT_COMMON_BASE)/x86/cpu_native.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/memory.c
+LIBKVMLOADER_SRCS += $(UK_PLAT_COMMON_BASE)/memory.c|common
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/print.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/x86/serial_console.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/shutdown.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/x86/vga_console.c
+LIBKVMLOADER_SRCS += $(LIBUKALLOC_BASE)/alloc.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/setup.c
+
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/link64.lds.S
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/entry64.S
+
+##
+## Nolibc files
+##
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/errno.c
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/stdio.c
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/ctype.c
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/stdlib.c
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/string.c
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/sscanf.c
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/asprintf.c
+LIBKVMLOADER_SRCS += $(LIBNOLIBC_BASE)/malloc.c
+
+##
+## Ukswrand files
+##
+LIBKVMLOADER_SRCS += $(LIBUKSWRAND_BASE)/mwc.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/ukswrand/swrand.c
+LIBKVMLOADER_SRCS += $(LIBUKSWRAND_BASE)/getrandom.c
+
+##
+## ElfLoader files
+##
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/elfloader/elf_load.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf_end.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf_errmsg.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf_errno.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf_kind.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf_memory.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf_phnum.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf_version.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/elf.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/gelf_ehdr.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/gelf_fsize.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/gelf_phdr.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_allocate.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_ar_util.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_convert.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_ehdr.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_fsize.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_memory.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_msize.c
+LIBKVMLOADER_SRCS += $(LIBKVMPLAT_BASE)/loader/libelf/libelf_phdr.c

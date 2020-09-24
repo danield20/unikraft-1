@@ -1,7 +1,6 @@
-/* SPDX-License-Identifier: BSD-2-Clause */
-/*
- * Copyright (c) 2009, Citrix Systems, Inc.
- * Copyright (c) 2018, NEC Europe Ltd., NEC Corporation.
+/*-
+ * Copyright (c) 2006,2008 Joseph Koshy
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,10 +11,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -24,43 +23,43 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* Taken from Mini-OS arch/x86/x86_64.S */
 
-#include <uk/plat/common/sw_ctx.h>
+#include <ar.h>
+#include <libelf.h>
 
-#define ENTRY(X) .globl X ; X :
+#include "_libelf.h"
 
-ENTRY(asm_thread_starter)
-	popq %rdi
-	popq %rbx
-	pushq $0
-	xorq %rbp,%rbp
-	call *%rbx
-	call *uk_sched_thread_exit@GOTPCREL(%rip)
+ELFTC_VCSID("$Id: elf_phnum.c 3174 2015-03-27 17:13:41Z emaste $");
 
-ENTRY(asm_ctx_start)
-	mov %rdi, %rsp      /* set SP */
-	push %rsi           /* push IP and return */
-	ret
+static int
+_libelf_getphdrnum(Elf *e, size_t *phnum)
+{
+	void *eh;
+	int ec;
 
-ENTRY(asm_sw_ctx_switch)
-	pushq %rbp
-	pushq %rbx
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-	movq %rsp, OFFSETOF_SW_CTX_SP(%rdi)       /* save ESP */
-	movq OFFSETOF_SW_CTX_SP(%rsi), %rsp       /* restore ESP */
-	lea .Lreturn(%rip), %rbx
-	movq %rbx, OFFSETOF_SW_CTX_IP(%rdi)       /* save EIP */
-	pushq OFFSETOF_SW_CTX_IP(%rsi)            /* restore EIP */
-	ret
-.Lreturn:
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbx
-	popq %rbp
-	ret
+	if (e == NULL || e->e_kind != ELF_K_ELF ||
+	    ((ec = e->e_class) != ELFCLASS32 && ec != ELFCLASS64)) {
+		LIBELF_SET_ERROR(ARGUMENT, 0);
+		return (-1);
+	}
+
+	if ((eh = _libelf_ehdr(e, ec, 0)) == NULL)
+		return (-1);
+
+	*phnum = e->e_u.e_elf.e_nphdr;
+
+	return (0);
+}
+
+int
+elf_getphdrnum(Elf *e, size_t *phnum)
+{
+	return (_libelf_getphdrnum(e, phnum));
+}
+
+/* Deprecated API */
+int
+elf_getphnum(Elf *e, size_t *phnum)
+{
+	return (_libelf_getphdrnum(e, phnum) >= 0);
+}

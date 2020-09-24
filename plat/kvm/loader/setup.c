@@ -40,13 +40,28 @@
 #include <uk/plat/console.h>
 #include <uk/assert.h>
 #include <uk/essentials.h>
-#include <uk/config.h>
+
+#include <errno.h>
+#include <uk/plat/common/cpu.h>
+#include <uk/plat/common/irq.h>
+#include <uk/print.h>
+#include <uk/plat/bootstrap.h>
+
+#include <libelf.h>
+#include <binfmt_elf.h>
+#include <uk/essentials.h>
+#include <uk/plat/memory.h>
+#include <uk/allocbbuddy.h>
+#include <sys/random.h>
+#include <uk/swrand2.h>
+#include <stdio.h>
 
 #define PLATFORM_MEM_START 0x100000
 #define PLATFORM_MAX_MEM_ADDR 0x40000000
 
 #define MAX_CMDLINE_SIZE 8192
 static char cmdline[MAX_CMDLINE_SIZE];
+static int max_address;
 
 struct kvmplat_config _libkvmplat_cfg = { 0 };
 
@@ -100,6 +115,8 @@ static inline void _mb_init_mem(struct multiboot_info *mi)
 	if (max_addr > PLATFORM_MAX_MEM_ADDR)
 		max_addr = PLATFORM_MAX_MEM_ADDR;
 	UK_ASSERT((size_t) __END <= max_addr);
+
+	max_address = max_addr;
 
 	/*
 	 * Reserve space for boot stack at the end of found memory
@@ -252,19 +269,76 @@ no_initrd:
 	return;
 }
 
-static void _libkvmplat_entry2(void *arg __attribute__((unused)))
+static inline void initialize_allocator()
 {
-	ukplat_entry_argp(NULL, cmdline, sizeof(cmdline));
+	struct ukplat_memregion_desc md;
+	int rc __maybe_unused = 0;
+	struct uk_alloc *a = NULL;
+
+	uk_pr_info("Initialize memory allocator...\n");
+
+	ukplat_memregion_foreach(&md, UKPLAT_MEMRF_ALLOCATABLE) {
+#if CONFIG_UKPLAT_MEMRNAME
+		uk_pr_debug("Try memory region: %p - %p (flags: 0x%02x, name: %s)...\n",
+			    md.base, (void *)((size_t)md.base + md.len),
+			    md.flags, md.name);
+#else
+		uk_pr_debug("Try memory region: %p - %p (flags: 0x%02x)...\n",
+			    md.base, (void *)((size_t)md.base + md.len),
+			    md.flags);
+#endif
+
+		/* try to use memory region to initialize allocator
+		 * if it fails, we will try  again with the next region.
+		 * As soon we have an allocator, we simply add every
+		 * subsequent region to it
+		 */
+		if (unlikely(!a))
+			a = uk_allocbbuddy_init(md.base, md.len);
+		else
+			uk_alloc_addmem(a, md.base, md.len);
+	}
+
+	if (unlikely(!a))
+		uk_pr_warn("No suitable memory region for memory allocator. Continue without heap\n");
+	else {
+		rc = ukplat_memallocator_set(a);
+		if (unlikely(rc != 0))
+			UK_CRASH("Could not set the platform memory allocator\n");
+	}
+}
+
+static inline int get_random_addr(int img_len)
+{
+	int random_addr, remaining_space;
+
+	/* search for a valid address for the pie kernel */
+	while (1) {
+		random_addr = uk_swrand_randr() % max_address;
+		random_addr = random_addr/__PAGE_SIZE * __PAGE_SIZE;
+		/* we don't want for the pie kernel to overlap with the non-pie part or initrd */
+		if (random_addr < 0x141000 + img_len)
+			continue;
+
+		remaining_space = max_address - random_addr;
+		if (remaining_space > img_len)
+			break;
+	}
+
+	uk_pr_info("Random address for pie kernel: %p\n", random_addr);
+
+	return random_addr;
 }
 
 void _libkvmplat_entry(void *arg)
 {
 	struct multiboot_info *mi = (struct multiboot_info *)arg;
+	struct multiboot_info *my_mi;
+	struct ukplat_memregion_desc img;
+	char *newcmdline;
 
 	_init_cpufeatures();
 	_libkvmplat_init_console();
-	traps_init();
-	intctrl_init();
 
 	uk_pr_info("Entering from KVM (x86)...\n");
 	uk_pr_info("     multiboot: %p\n", mi);
@@ -275,14 +349,7 @@ void _libkvmplat_entry(void *arg)
 	 */
 	_mb_get_cmdline(mi);
 	_mb_init_mem(mi);
-	/*
-	 * If the unikernel is compiled as PIE and we want to run it with ASLR, the
-	 * unikernel code will first be placed in the initrd section and then will be
-	 * relocated by the bootloader. After the relocation we will not have an initrd.
-	 */
-	#ifndef CONFIG_ENABLE_PIE
 	_mb_init_initrd(mi);
-	#endif
 
 	if (_libkvmplat_cfg.initrd.len)
 		uk_pr_info("        initrd: %p\n",
@@ -295,15 +362,44 @@ void _libkvmplat_entry(void *arg)
 	uk_pr_info("     stack top: %p\n",
 		   (void *) _libkvmplat_cfg.bstack.start);
 
-#ifdef CONFIG_HAVE_SYSCALL
-	_init_syscall();
-#endif /* CONFIG_HAVE_SYSCALL */
+	if (elf_version(EV_CURRENT) == EV_NONE)
+		UK_CRASH("Failed to initialize libelf: Version error");
+
+	uk_pr_info("Searching for image...\n");
+	int rc = ukplat_memregion_find_initrd0(&img);
+	if (rc < 0 || !img.base || !img.len) {
+		uk_pr_info("Error1\n");
+	}
+
+	uk_pr_info("Image at %p, len %"__PRIsz" bytes\n",
+		   img.base, img.len);
+
+	initialize_allocator();
+
+	my_mi = malloc(sizeof(struct multiboot_info));
+	memcpy(my_mi, mi, sizeof(struct multiboot_info));
+	uk_pr_info("mi: %p my_mi: %p %s\n", mi->cmdline, my_mi->cmdline, cmdline);
+	newcmdline = malloc(MAX_CMDLINE_SIZE);
+	strcpy(newcmdline, cmdline);
+	my_mi->cmdline = newcmdline;
+
+	/* initialize randomizer */
+	aslr_uk_swrand_ctor();
+
+	void *elf_load_address = get_random_addr(_libkvmplat_cfg.initrd.len);
 
 	/*
-	 * Switch away from the bootstrap stack as early as possible.
+	 * Parse image
 	 */
-	uk_pr_info("Switch from bootstrap stack to stack @%p\n",
-		   (void *) _libkvmplat_cfg.bstack.end);
-	_libkvmplat_newstack(_libkvmplat_cfg.bstack.end,
-			     _libkvmplat_entry2, 0);
+	uk_pr_info("Load image...\n");
+	struct elf_prog  *prog = load_elf(uk_alloc_get_default(), img.base, img.len,
+					"PIE kernel", elf_load_address);
+	if (!prog) {
+		uk_pr_info("Error loading the elf\n");
+	}
+
+	/* Jump to elf entry */
+	uk_pr_info("Entry point at %p\n", prog->entry);
+	void (*elf_entry)(void *) = (void (*)(void *))prog->entry;
+	elf_entry(my_mi);
 }
