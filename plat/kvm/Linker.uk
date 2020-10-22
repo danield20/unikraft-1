@@ -77,7 +77,7 @@ $(KVMLOADER_DEBUG_IMAGE): $(KVMLOADER_ALIBS) $(KVMLOADER_ALIBS-y) $(KVMLOADER_OL
 		$(OBJCOPY) -w -G kvmos_* -G _libkvmplat_entry \
 			$(KVMLOADER_IMAGE).ld.o $(KVMLOADER_IMAGE).o)
 	$(call build_cmd,LD,,$@,\
-	       $(LD) $(LDFLAGS) $(LDFLAGS-y) \
+	       $(LD) $(LOADER_LDFLAGS) $(LOADER_LDFLAGS-y) \
 		     $(KVM_LDFLAGS) $(KVM_LDFLAGS-y) \
 		     $(KVM_LD_SCRIPT_FLAGS) \
 		     $(KVMLOADER_IMAGE).o -o $@)

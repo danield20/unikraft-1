@@ -134,6 +134,15 @@ endef
 #  ''     -> ''
 vprefix_glb = $(if $(filter isr,$(1)),$(addprefix ISR_,$(2)),$(2))
 
+
+# vprefix_loader $variant,$varname(s)
+#  prefixes global variables for reserved variants:
+#  '|loader' -> 'LOADER_'   # reserved variant for code that can be called within
+#                    		# interrupt service routines (e.g., uses only generic regs)
+#  '|.*'  -> ''
+#  ''     -> ''
+vprefix_loader = $(if $(filter loader commonloader,$(1)),$(addprefix LOADER_,$(2)),$(2))
+
 ################################################################################
 #
 # Registration
@@ -392,7 +401,7 @@ endef
 define buildrule_S_ =
 $(4): $(2) | prepare
 	$(call build_cmd_fixdep,AS,$(1),$(4),\
-		$(AS)  $$(COMPFLAGS) $$(COMPFLAGS-y) \
+		$(AS)  $$($(call vprefix_loader,$(3),COMPFLAGS)) $$($(call vprefix_loader,$(3),COMPFLAGS-y)) \
 		       $$($(call vprefix_lib,$(1),COMPFLAGS)) $$($(call vprefix_lib,$(1),COMPFLAGS-y)) \
 		       $$(ASINCLUDES) $$(ASINCLUDES-y) \
 		       $$($(call vprefix_lib,$(1),ASINCLUDES)) $$($(call vprefix_lib,$(1),ASINCLUDES-y)) \
@@ -419,7 +428,7 @@ buildrule_sx = $(call buildrule_S_,$(1),$(2),$(3),$(4))
 define buildrule_s =
 $(4): $(2) | prepare
 	$(call build_cmd,AS,$(1),$(4),\
-		$(AS)  $$(COMPFLAGS) $$(COMPFLAGS-y) \
+		$(AS)  $$($(call vprefix_loader,$(3),COMPFLAGS)) $$($(call vprefix_loader,$(3),COMPFLAGS-y)) \
 		       $$($(call vprefix_lib,$(1),COMPFLAGS)) $$($(call vprefix_lib,$(1),COMPFLAGS-y)) \
 		       $$(ASINCLUDES) $$(ASINCLUDES-y) \
 		       $$($(call vprefix_lib,$(1),ASINCLUDES)) $$($(call vprefix_lib,$(1),ASINCLUDES-y)) \
@@ -444,7 +453,7 @@ endef
 define buildrule_c =
 $(4): $(2) | prepare
 	$(call build_cmd_fixdep,CC,$(1),$(4),\
-		$(CC)  $$(COMPFLAGS) $$(COMPFLAGS-y) \
+		$(CC)  $$($(call vprefix_loader,$(3),COMPFLAGS)) $$($(call vprefix_loader,$(3),COMPFLAGS-y)) \
 		       $$($(call vprefix_lib,$(1),COMPFLAGS)) $$($(call vprefix_lib,$(1),COMPFLAGS-y)) \
 		       $$(CINCLUDES) $$(CINCLUDES-y) \
 		       $$($(call vprefix_lib,$(1),CINCLUDES)) $$($(call vprefix_lib,$(1),CINCLUDES-y)) \
@@ -469,7 +478,7 @@ endef
 define buildrule_cxx =
 $(4): $(2) | prepare
 	$(call build_cmd_fixdep,CXX,$(1),$(4),\
-		$(CXX) $$(COMPFLAGS) $$(COMPFLAGS-y) \
+		$(CXX) $$($(call vprefix_loader,$(3),COMPFLAGS)) $$($(call vprefix_loader,$(3),COMPFLAGS-y)) \
 		       $$(CXXINCLUDES) $$(CXXINCLUDES-y) \
 		       $$($(call vprefix_lib,$(1),CXXINCLUDES)) $$($(call vprefix_lib,$(1),CXXINCLUDES-y)) \
 		       $$($(call vprefix_src,$(1),$(2),$(3),INCLUDES)) $$($(call vprefix_src,$(1),$(2),$(3),INCLUDES-y)) \
@@ -501,7 +510,7 @@ buildrule_c$(plus)$(plus) = $(call buildrule_cxx,$(1),$(2),$(3),$(4))
 define buildrule_go =
 $(4): $(2) | prepare
 	$(call build_cmd,GOC,$(1),$(4),\
-		$(GOC) $$(COMPFLAGS) $$(COMPFLAGS-y) \
+		$(GOC) $$($(call vprefix_loader,$(3),COMPFLAGS)) $$($(call vprefix_loader,$(3),COMPFLAGS-y)) \
 		       $$(GOCINCLUDES) $$(GOCINCLUDES-y) \
 		       $$($(call vprefix_lib,$(1),GOCINCLUDES)) $$($(call vprefix_lib,$(1),GOCINCLUDES-y)) \
 		       $$($(call vprefix_src,$(1),$(2),$(3),INCLUDES)) $$($(call vprefix_src,$(1),$(2),$(3),INCLUDES-y)) \
@@ -533,7 +542,7 @@ endef
 define buildrule_S_lds =
 $(4): $(2) | prepare
 	$(call build_cmd_fixdep,LDS,$(1),$(4),\
-		$(AS)  -E -P -x assembler-with-cpp $$(COMPFLAGS) $$(COMPFLAGS-y) \
+		$(AS)  -E -P -x assembler-with-cpp $$($(call vprefix_loader,$(3),COMPFLAGS)) $$($(call vprefix_loader,$(3),COMPFLAGS-y)) \
 		       $$(ASINCLUDES) $$(ASINCLUDES-y) \
 		       $$($(call vprefix_lib,$(1),ASINCLUDES)) $$($(call vprefix_lib,$(1),ASINCLUDES-y)) \
 		       $$($(call vprefix_src,$(1),$(2),$(3),INCLUDES)) $$($(call vprefix_src,$(1),$(2),$(3),INCLUDES-y)) \
