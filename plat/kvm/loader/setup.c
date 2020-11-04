@@ -308,9 +308,9 @@ static inline void initialize_allocator()
 	}
 }
 
-static inline int get_random_addr(int img_len)
+static inline long get_random_addr(int img_len)
 {
-	int random_addr, remaining_space;
+	long int random_addr, remaining_space;
 
 	/* search for a valid address for the pie kernel */
 	while (1) {
@@ -325,7 +325,7 @@ static inline int get_random_addr(int img_len)
 			break;
 	}
 
-	uk_pr_info("Random address for pie kernel: %p\n", random_addr);
+	uk_pr_info("Random address for pie kernel: %p\n", (void *)random_addr);
 
 	return random_addr;
 }
@@ -378,15 +378,14 @@ void _libkvmplat_entry(void *arg)
 
 	my_mi = malloc(sizeof(struct multiboot_info));
 	memcpy(my_mi, mi, sizeof(struct multiboot_info));
-	uk_pr_info("mi: %p my_mi: %p %s\n", mi->cmdline, my_mi->cmdline, cmdline);
 	newcmdline = malloc(MAX_CMDLINE_SIZE);
 	strcpy(newcmdline, cmdline);
-	my_mi->cmdline = newcmdline;
+	my_mi->cmdline = (multiboot_uint64_t)newcmdline;
 
 	/* initialize randomizer */
 	aslr_uk_swrand_ctor();
 
-	void *elf_load_address = get_random_addr(_libkvmplat_cfg.initrd.len);
+	void *elf_load_address = (void *)get_random_addr(_libkvmplat_cfg.initrd.len);
 
 	/*
 	 * Parse image
@@ -399,7 +398,7 @@ void _libkvmplat_entry(void *arg)
 	}
 
 	/* Jump to elf entry */
-	uk_pr_info("Entry point at %p\n", prog->entry);
+	uk_pr_info("Entry point at %p\n", (void *)prog->entry);
 	void (*elf_entry)(void *) = (void (*)(void *))prog->entry;
 	elf_entry(my_mi);
 }

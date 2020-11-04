@@ -161,8 +161,7 @@ struct elf_prog *load_elf(struct uk_alloc *a, void *img_base, size_t img_len,
 
 	/* solve dynamic relocations */
 	shdr = (Elf64_Shdr *)(img_base + ehdr.e_shoff);
-    for (int i = 0; i < ehdr.e_shnum; i++)
-    {
+    for (int i = 0; i < ehdr.e_shnum; i++) {
 		if (shdr[i].sh_type == SHT_RELA) {
 			retab = (Elf64_Rela *)(img_base + shdr[i].sh_offset);
 			retab_end = (Elf64_Rela *)((char *)retab + shdr[i].sh_size);
@@ -172,13 +171,12 @@ struct elf_prog *load_elf(struct uk_alloc *a, void *img_base, size_t img_len,
 
 	p = retab;
 
-	while(p<retab_end)
-    {
+	while(p < retab_end) {
 		if (p->r_offset == 0)
 			break;
 
 		int *to_modify = (void *)(p->r_offset) + 0x138000;
-		*to_modify = p->r_addend + elf_load_address;
+		*to_modify = (long int) (p->r_addend + elf_load_address);
 
         p++;
     }
